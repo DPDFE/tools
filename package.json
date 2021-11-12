@@ -1,5 +1,5 @@
 {
-    "name": "@dpdfe/js-utils",
+    "name": "@dpdfe/tools",
     "version": "0.0.1",
     "scripts": {
         "dev": "vite",
