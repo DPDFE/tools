@@ -22,7 +22,7 @@ export default defineConfig({
         lib: {
             entry: join(src_root_dir, 'main.ts'),
             formats: ['umd', 'es'],
-            name: 'jsutils',
+            name: 'tools',
         },
     },
     server: {

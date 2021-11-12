@@ -12,7 +12,7 @@
         "test": "jest",
         "preinstall": "npx -y only-allow pnpm"
     },
-    "main": "dist/js-utils.umd.js",
+    "main": "dist/tools.umd.js",
     "module": "dist/main.js",
     "style": "dist/style.css",
     "types": "dist/main.d.ts",
