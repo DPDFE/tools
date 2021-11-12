@@ -1,3 +1,7 @@
+### project
+# testing
+/coverage
+
 ### VisualStudioCode template
 .vscode/*
 !.vscode/settings.json

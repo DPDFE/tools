@@ -11,8 +11,6 @@ export default function pinYinFuzzSearch<T>(
     options?: PinYinFuzzSearchOption<T>,
 ): T[] {
     options = _mergedDefaultOption(options);
-
-    console.log(word, list, options);
     return [];
 }
 
@@ -25,7 +23,7 @@ function _mergedDefaultOption<T>(
     options?: PinYinFuzzSearchOption<T>,
 ): PinYinFuzzSearchOption<T> {
     return {
-        sort: options?.sort ?? true,
+        sort: options?.sort ?? 'auto',
         multiple: options?.multiple ?? 'ALL',
         separator: options?.separator ?? ' ',
         /**
@@ -33,7 +31,8 @@ function _mergedDefaultOption<T>(
          *
          * @param item - 待搜索数组中的一项
          */
-        textProvider: (item: T) => item as unknown as string,
+        textProvider:
+            options?.textProvider ?? ((item: T) => item as unknown as string),
     };
 }
 
@@ -41,8 +40,8 @@ function _mergedDefaultOption<T>(
  * 支持的配置项
  */
 export interface PinYinFuzzSearchOption<T> {
-    /** 是否将匹配后的结果按照匹配相似度排序，相信度越高，在结果数组中越靠前，默认 true，如果为 false，则按照用户传入的顺序 */
-    sort?: boolean;
+    /** auto: 是否将匹配后的结果按照匹配相似度排序，相信度越高，在结果数组中越靠前，如果相似度相同，则按照字母升序，默认 auto。如果为 raw，则按照用户传入的顺序 */
+    sort?: 'asc' | 'desc' | 'auto' | 'raw';
 
     /** 多词同时搜索时，搜索策略，ALL(需全部命中，默认值)、ANY(命中一个即可) */
     multiple?: 'ALL' | 'ANY';
