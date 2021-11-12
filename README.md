@@ -1,3 +1,3 @@
-# js-utils
+# tools
 
-js 工具库
+纯 js 工具库
