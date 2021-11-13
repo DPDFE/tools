@@ -1,10 +1,10 @@
 /// <reference types="jest" />
 
-import pinYinFuzzSearch, {PinYinFuzzSearchOption} from '@/pinyin_search';
+import pinYinFuzzSearch, {PinYinFuzzSearchOption} from '../src/pinyin_search';
 
 describe('拼音搜索工具 › multiple 参数', () => {
     // 为避免返回顺序导致测试结果不一致，这里将sort参数强制保持原始顺序
-    const options: PinYinFuzzSearchOption<string> = {sort: 'raw'};
+    const options: PinYinFuzzSearchOption<string> = {sort: 'RAW'};
 
     test('任意匹配就返回', () => {
         const result = pinYinFuzzSearch('是 的', ['的', '是1', '2'], {
@@ -31,7 +31,7 @@ describe('拼音搜索工具 › multiple 参数', () => {
 describe('拼音搜索工具 › sort 参数', () => {
     test('返回顺序与传递顺序要一致', () => {
         const result = pinYinFuzzSearch('是', ['是3', '是1', '是2'], {
-            sort: 'raw',
+            sort: 'RAW',
         });
         expect(result).toEqual(['是3', '是1', '是2']);
     });
@@ -42,7 +42,7 @@ describe('拼音搜索工具 › sort 参数', () => {
         const expected = ['是的', '是的1', '是的2'];
 
         const result = pinYinFuzzSearch(word, list, {
-            sort: 'auto',
+            sort: 'AUTO',
         });
         const default_result = pinYinFuzzSearch(word, list);
         expect(default_result).toEqual(expected);
@@ -51,14 +51,14 @@ describe('拼音搜索工具 › sort 参数', () => {
 
     test('升序返回', () => {
         const result = pinYinFuzzSearch('是的', ['是的2', '是的', '是的1'], {
-            sort: 'asc',
+            sort: 'ASC',
         });
         expect(result).toEqual(['是的', '是的1', '是的2']);
     });
 
     test('降序返回', () => {
         const result = pinYinFuzzSearch('是的', ['是的2', '是的', '是的1'], {
-            sort: 'desc',
+            sort: 'DESC',
         });
         expect(result).toEqual(['是的2', '是的1', '是的']);
     });
@@ -67,7 +67,7 @@ describe('拼音搜索工具 › sort 参数', () => {
 describe('拼音搜索工具 › separator 参数', () => {
     // 为避免返回顺序导致测试结果不一致
     const options: PinYinFuzzSearchOption<string> = {
-        sort: 'raw',
+        sort: 'RAW',
     };
 
     test('英文逗号分割', () => {

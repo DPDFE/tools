@@ -23,7 +23,7 @@ function _mergedDefaultOption<T>(
     options?: PinYinFuzzSearchOption<T>,
 ): PinYinFuzzSearchOption<T> {
     return {
-        sort: options?.sort ?? 'auto',
+        sort: options?.sort ?? 'AUTO',
         multiple: options?.multiple ?? 'ALL',
         separator: options?.separator ?? ' ',
         /**
@@ -41,7 +41,7 @@ function _mergedDefaultOption<T>(
  */
 export interface PinYinFuzzSearchOption<T> {
     /** auto: 是否将匹配后的结果按照匹配相似度排序，相信度越高，在结果数组中越靠前，如果相似度相同，则按照字母升序，默认 auto。如果为 raw，则按照用户传入的顺序 */
-    sort?: 'asc' | 'desc' | 'auto' | 'raw';
+    sort?: 'ASC' | 'DESC' | 'AUTO' | 'RAW';
 
     /** 多词同时搜索时，搜索策略，ALL(需全部命中，默认值)、ANY(命中一个即可) */
     multiple?: 'ALL' | 'ANY';
