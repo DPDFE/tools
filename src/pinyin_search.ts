@@ -1,3 +1,42 @@
+import {dict} from './dict';
+
+// 汉字 -> 拼音索引
+const pinyin_map = new Map<string, string>();
+
+const chinese_regex = /.*[\u4e00-\u9fa5]+.*$/;
+
+const all_pinyin = Object.keys(dict);
+
+// 所有拼音及拼音首字母，用于分词
+const pinyin_prefix = new Set<string>([
+    ...all_pinyin,
+    ...all_pinyin.map((w) => w[0]),
+]);
+
+/**
+ * 建立汉字 - 拼音索引 包含同个汉字的多发音
+ */
+function create_pinyin_map() {
+    for (const [key, characters] of Object.entries(dict)) {
+        for (const character of characters) {
+            if (pinyin_map.has(character)) {
+                pinyin_map.set(
+                    character,
+                    pinyin_map.get(character) + ` ${key}`,
+                );
+            } else {
+                pinyin_map.set(character, key);
+            }
+        }
+    }
+}
+
+const options: PinYinFuzzSearchOption<string> = {sort: 'RAW'};
+const result = pinYinFuzzSearch('sd', ['的', '是的', '是2的'], {
+    multiple: 'ANY',
+    ...options,
+});
+
 /**
  * 支持拼音模糊搜索
  *
@@ -11,9 +50,116 @@ export default function pinYinFuzzSearch<T>(
     options?: PinYinFuzzSearchOption<T>,
 ): T[] {
     options = _mergedDefaultOption(options);
+
+    create_pinyin_map();
+
+    if (typeof list[0] === 'string') {
+        const pinyin_list = getPinYinList(list as unknown as string[]);
+
+        word.split(' ').forEach((w) => {
+            // 无中文时，用拼音分词查找
+            if (!chinese_regex.test(w)) {
+                const break_list = getAllPinyinBreak(0, w);
+                console.log(
+                    getMatchResult(pinyin_list, break_list, list, options),
+                );
+            } else {
+                // 有中文时
+            }
+        });
+    }
+
     return [];
 }
 
+/**
+ * 获取拼音转换后的list
+ *
+ * @param list - 在哪个数组中搜索
+ */
+function getPinYinList(list: string[]) {
+    const pinyin_list = (list as unknown as string[]).map((words) => {
+        const pinyin_arr: string[] = [];
+
+        for (const character of words) {
+            pinyin_arr.push(pinyin_map.get(character) ?? character);
+        }
+
+        return pinyin_arr;
+    });
+
+    return pinyin_list;
+}
+
+/**
+ * 返回拼音的所有分词
+ *
+ * @param begin - 开始位置
+ * @param word - 需要分词的[拼音] 不要输入汉字
+ * @param result - 递归用
+ * @returns
+ */
+function getAllPinyinBreak(begin: number, word: string, result: string[] = []) {
+    if (begin === word.length) {
+        return [result.join(' ')];
+    }
+
+    let word_break: string[] = [];
+    for (let i = begin; i < word.length; i++) {
+        const s_word = word.substring(begin, i + 1);
+        if (pinyin_prefix.has(s_word)) {
+            result.push(s_word);
+            word_break = getAllPinyinBreak(i + 1, word, result);
+            result.pop();
+        }
+    }
+
+    return word_break;
+}
+
+/**
+ * 获取匹配结果
+ *
+ * @param pinyin_list - 拼音化的list
+ * @param word_break - 分词后的word
+ * @param list - 原list
+ * @returns
+ */
+function getMatchResult<T>(
+    pinyin_list: string[][],
+    word_break: string[],
+    list: T[],
+) {
+    const res: T[] = [];
+
+    pinyin_list.forEach((list_word: string[], index) => {
+        word_break.forEach((word) => {
+            let l_index = 0,
+                s_index = 0;
+            const single_word = word.split(' ');
+
+            while (l_index < list_word.length && s_index < single_word.length) {
+                if (
+                    list_word[l_index]
+                        .split(' ')
+                        .find((s) => s.includes(single_word[s_index]))
+                ) {
+                    l_index++;
+                    s_index++;
+                } else {
+                    l_index++;
+                }
+
+                // s_index === l_index 时为严格匹配
+                if (s_index === single_word.length && s_index === l_index) {
+                    res.push(list[index]);
+                }
+            }
+        });
+    });
+
+    return res;
+}
 /**
  * 设置默认配置项
  *
