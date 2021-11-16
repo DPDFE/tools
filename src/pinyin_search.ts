@@ -3,7 +3,9 @@ import {dict} from './dict';
 // 汉字 -> 拼音索引
 const pinyin_map = new Map<string, string>();
 
-const chinese_regex = /.*[\u4e00-\u9fa5]+.*$/;
+const chinese_regex = /[\u4e00-\u9fa5]/g;
+const english_regex = /[a-zA-Z]/g;
+const all_chinese_regex = /^[\u4e00-\u9fa5]+$/;
 
 const all_pinyin = Object.keys(dict);
 
@@ -32,10 +34,11 @@ function create_pinyin_map() {
 }
 
 const options: PinYinFuzzSearchOption<string> = {sort: 'RAW'};
-const result = pinYinFuzzSearch('sd', ['的', '是的', '是2的'], {
+const result = pinYinFuzzSearch('szhang三w', ['是张三五三为', '是李四三'], {
     multiple: 'ANY',
     ...options,
 });
+console.log(result);
 
 /**
  * 支持拼音模糊搜索
@@ -50,26 +53,58 @@ export default function pinYinFuzzSearch<T>(
     options?: PinYinFuzzSearchOption<T>,
 ): T[] {
     options = _mergedDefaultOption(options);
+    const result: T[] = [];
 
     create_pinyin_map();
 
-    if (typeof list[0] === 'string') {
-        const pinyin_list = getPinYinList(list as unknown as string[]);
+    const string_list = list.map(options.textProvider!);
 
-        word.split(' ').forEach((w) => {
+    const pinyin_list = getPinYinList(string_list);
+
+    if (options.multiple === 'ANY') {
+        word.split(options.separator ?? ' ').forEach((w) => {
             // 无中文时，用拼音分词查找
             if (!chinese_regex.test(w)) {
                 const break_list = getAllPinyinBreak(0, w);
-                console.log(
-                    getMatchResult(pinyin_list, break_list, list, options),
+
+                const index_arr = getMatchResult(
+                    pinyin_list,
+                    break_list,
+                    options as unknown as any,
                 );
+
+                const result_list = index_arr.map((index) => list[index]);
+
+                result.push(...result_list);
             } else {
-                // 有中文时
+                // 中文转成拼音，再搜索
+
+                const _w = w
+                    .split('')
+                    .map((c) => {
+                        if (pinyin_map.has(c)) {
+                            return pinyin_map.get(c)!;
+                        }
+                        return c;
+                    })
+                    .join('');
+
+                const break_list = getAllPinyinBreak(0, _w);
+
+                const index_arr = getMatchResult(
+                    pinyin_list,
+                    break_list,
+                    options as unknown as any,
+                );
+
+                const result_list = index_arr.map((index) => list[index]);
+
+                result.push(...result_list);
             }
         });
     }
 
-    return [];
+    return result;
 }
 
 /**
@@ -125,12 +160,12 @@ function getAllPinyinBreak(begin: number, word: string, result: string[] = []) {
  * @param list - 原list
  * @returns
  */
-function getMatchResult<T>(
+function getMatchResult(
     pinyin_list: string[][],
     word_break: string[],
-    list: T[],
+    options: PinYinFuzzSearchOption<string>,
 ) {
-    const res: T[] = [];
+    const res: number[] = [];
 
     pinyin_list.forEach((list_word: string[], index) => {
         word_break.forEach((word) => {
@@ -150,14 +185,17 @@ function getMatchResult<T>(
                     l_index++;
                 }
 
-                // s_index === l_index 时为严格匹配
-                if (s_index === single_word.length && s_index === l_index) {
-                    res.push(list[index]);
+                if (s_index === single_word.length) {
+                    if (options?.multiple === 'ANY') {
+                        res.push(index);
+                    } else if (s_index === l_index) {
+                        // s_index === l_index 时为严格匹配
+                        res.push(index);
+                    }
                 }
             }
         });
     });
-
     return res;
 }
 /**
@@ -167,7 +205,7 @@ function getMatchResult<T>(
  */
 function _mergedDefaultOption<T>(
     options?: PinYinFuzzSearchOption<T>,
-): PinYinFuzzSearchOption<T> {
+): Required<PinYinFuzzSearchOption<T>> {
     return {
         sort: options?.sort ?? 'AUTO',
         multiple: options?.multiple ?? 'ALL',
