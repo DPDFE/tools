@@ -1,3 +1,4 @@
-import pinYinFuzzSearch from '@/pinyin_search';
+import {createApp} from 'vue';
+import App from './app.vue';
 
-export {pinYinFuzzSearch};
+createApp(App).mount('#app');

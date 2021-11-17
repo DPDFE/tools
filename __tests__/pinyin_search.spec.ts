@@ -2,6 +2,8 @@
 
 import pinYinFuzzSearch, {PinYinFuzzSearchOption} from '../src/pinyin_search';
 
+// 按微信搜索联系人的规则
+
 describe('拼音搜索工具 › multiple 参数', () => {
     // 为避免返回顺序导致测试结果不一致，这里将sort参数强制保持原始顺序
     const options: PinYinFuzzSearchOption<string> = {sort: 'RAW'};
@@ -11,7 +13,7 @@ describe('拼音搜索工具 › multiple 参数', () => {
             multiple: 'ANY',
             ...options,
         });
-        expect(result).toEqual(['的', '是1']);
+        expect(result).toEqual(['是1', '的']);
     });
 
     test('全部匹配才返回', () => {
@@ -79,13 +81,13 @@ describe('拼音搜索工具 › separator 参数', () => {
                 ...options,
             },
         );
-        expect(result).toEqual(['是 的', '是 ,我的']);
+        expect(result).toEqual(['是我的', '是 的', '是,的', '是 ,我的']);
     });
 
     test('默认值空格分割', () => {
         const word = '是 的';
         const list = ['是的', '是我的', '的是吧'];
-        const expected = ['是的', '是我的'];
+        const expected = ['是的', '是我的', '的是吧'];
         const result = pinYinFuzzSearch(word, list, {
             separator: ' ',
             ...options,
@@ -104,8 +106,8 @@ describe('拼音搜索工具 › 功能', () => {
     });
 
     test('支持拼音、中文、英文，支持模糊搜索', () => {
-        const result = pinYinFuzzSearch('是ah', ['是张三hi', '是李四ha']);
-        expect(result).toEqual(['是张三']);
+        const result = pinYinFuzzSearch('是zs', ['是张三hi', '是李四ha']);
+        expect(result).toEqual(['是张三hi']);
     });
 
     test('支持拼音模糊搜索', () => {
@@ -124,21 +126,6 @@ describe('拼音搜索工具 › 功能', () => {
     test('无匹配结果时返回空数组', () => {
         const result = pinYinFuzzSearch('404', ['是张三', '是李四']);
         expect(result).toEqual([]);
-    });
-
-    test('自定义供用户匹配的字段', () => {
-        const result = pinYinFuzzSearch(
-            'ls',
-            [
-                {name: '是张三', id: 1},
-                {name: '是李四', id: 2},
-            ],
-            {
-                /** @param item - - */
-                textProvider: (item) => item.name,
-            },
-        );
-        expect(result).toEqual([{name: '是李四', id: 2}]);
     });
 
     test('自定义供用户匹配的字段', () => {

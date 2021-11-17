@@ -1,4 +1,5 @@
 import {join} from 'path';
+import vue from '@vitejs/plugin-vue';
 import {defineConfig} from 'vite';
 
 const src_root_dir = join(__dirname, 'src');
@@ -35,5 +36,5 @@ export default defineConfig({
             },
         },
     },
-    plugins: [],
+    plugins: [vue()],
 });

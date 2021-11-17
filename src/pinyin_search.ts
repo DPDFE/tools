@@ -1,9 +1,10 @@
 import {dict} from './dict';
+import levenshtein from 'js-levenshtein';
 
 // 汉字 -> 拼音索引
 const pinyin_map = new Map<string, string>();
 
-const chinese_regex = /[\u4e00-\u9fa5]/g;
+const chinese_regex = /.*[\u4e00-\u9fa5]+.*$/;
 const english_regex = /[a-zA-Z]/g;
 const all_chinese_regex = /^[\u4e00-\u9fa5]+$/;
 
@@ -34,11 +35,6 @@ function create_pinyin_map() {
 }
 
 const options: PinYinFuzzSearchOption<string> = {sort: 'RAW'};
-const result = pinYinFuzzSearch('szhang三w', ['是张三五三为', '是李四三'], {
-    multiple: 'ANY',
-    ...options,
-});
-console.log(result);
 
 /**
  * 支持拼音模糊搜索
@@ -53,60 +49,129 @@ export default function pinYinFuzzSearch<T>(
     options?: PinYinFuzzSearchOption<T>,
 ): T[] {
     options = _mergedDefaultOption(options);
-    const result: T[] = [];
+    let result: T[] = [];
 
-    create_pinyin_map();
+    if (pinyin_map.size === 0) create_pinyin_map();
 
     const string_list = list.map(options.textProvider!);
 
     const pinyin_list = getPinYinList(string_list);
 
-    if (options.multiple === 'ANY') {
-        word.split(options.separator ?? ' ').forEach((w) => {
-            // 无中文时，用拼音分词查找
-            if (!chinese_regex.test(w)) {
-                const break_list = getAllPinyinBreak(0, w);
+    word.split(options.separator!).forEach((w) => {
+        if (chinese_regex.test(w)) {
+            // 中文转成拼音，再搜索
 
-                const index_arr = getMatchResult(
-                    pinyin_list,
-                    break_list,
-                    options as unknown as any,
-                );
+            const _w = w
+                .split('')
+                .map((c) => {
+                    if (pinyin_map.has(c)) {
+                        return pinyin_map.get(c)!.split(' ')[0];
+                    }
+                    return c;
+                })
+                .join('')
+                .trim();
 
-                const result_list = index_arr.map((index) => list[index]);
+            const break_list = getAllPinyinBreak(0, _w);
 
-                result.push(...result_list);
-            } else {
-                // 中文转成拼音，再搜索
+            const index_arr = getMatchResult(
+                pinyin_list,
+                break_list,
+                options as unknown as any,
+            );
 
-                const _w = w
-                    .split('')
-                    .map((c) => {
-                        if (pinyin_map.has(c)) {
-                            return pinyin_map.get(c)!;
-                        }
-                        return c;
-                    })
-                    .join('');
+            let result_list = index_arr.map((index) => list[index]);
 
-                const break_list = getAllPinyinBreak(0, _w);
+            result_list = sortResult(result_list, w, options!);
 
-                const index_arr = getMatchResult(
-                    pinyin_list,
-                    break_list,
-                    options as unknown as any,
-                );
-
-                const result_list = index_arr.map((index) => list[index]);
-
-                result.push(...result_list);
+            if (
+                options?.multiple === 'ALL' &&
+                result.length !== 0 &&
+                result_list.length !== 0
+            ) {
+                result_list = result_list.filter((r) => result.includes(r));
+                result = result.filter((r) => result_list.includes(r));
             }
-        });
-    }
 
-    return result;
+            result.push(...result_list);
+        } else {
+            // 无中文时，用拼音分词查找
+            const break_list = getAllPinyinBreak(0, w);
+
+            const index_arr = getMatchResult(
+                pinyin_list,
+                break_list,
+                options as unknown as any,
+            );
+
+            let result_list = index_arr.map((index) => list[index]);
+
+            result_list = sortResult(result_list, w, options!);
+
+            if (
+                options?.multiple === 'ALL' &&
+                result.length !== 0 &&
+                result_list.length !== 0
+            ) {
+                result_list = result_list.filter((r) => result.includes(r));
+                result = result.filter((r) => result_list.includes(r));
+            }
+
+            result.push(...result_list);
+        }
+    });
+
+    return [...new Set(result)];
 }
 
+/**
+ * 对返回结果排序
+ *
+ * @param result - 返回结果
+ * @param word - 带匹配单词
+ * @param options - 选项
+ */
+function sortResult<T>(
+    result: T[],
+    word: string,
+    options: PinYinFuzzSearchOption<T>,
+) {
+    switch (options!.sort) {
+        case 'RAW':
+            return result;
+            break;
+        case 'ASC':
+            return result.sort((a, b) =>
+                options!.textProvider!(a).localeCompare(
+                    options!.textProvider!(b),
+                ),
+            );
+            break;
+        case 'DESC':
+            return result.sort((a, b) =>
+                options!.textProvider!(b).localeCompare(
+                    options!.textProvider!(a),
+                ),
+            );
+            break;
+        case 'AUTO':
+            return result
+                .sort((a, b) =>
+                    options!.textProvider!(a).localeCompare(
+                        options!.textProvider!(b),
+                    ),
+                )
+                .sort(
+                    (a, b) =>
+                        levenshtein(word, options!.textProvider!(a)) -
+                        levenshtein(word, options!.textProvider!(b)),
+                );
+            break;
+        default:
+            return result;
+            break;
+    }
+}
 /**
  * 获取拼音转换后的list
  *
@@ -140,8 +205,10 @@ function getAllPinyinBreak(begin: number, word: string, result: string[] = []) {
     }
 
     let word_break: string[] = [];
+
     for (let i = begin; i < word.length; i++) {
         const s_word = word.substring(begin, i + 1);
+
         if (pinyin_prefix.has(s_word)) {
             result.push(s_word);
             word_break = getAllPinyinBreak(i + 1, word, result);
@@ -177,7 +244,7 @@ function getMatchResult(
                 if (
                     list_word[l_index]
                         .split(' ')
-                        .find((s) => s.includes(single_word[s_index]))
+                        .find((s) => s.startsWith(single_word[s_index]))
                 ) {
                     l_index++;
                     s_index++;
@@ -186,12 +253,12 @@ function getMatchResult(
                 }
 
                 if (s_index === single_word.length) {
-                    if (options?.multiple === 'ANY') {
-                        res.push(index);
-                    } else if (s_index === l_index) {
-                        // s_index === l_index 时为严格匹配
-                        res.push(index);
-                    }
+                    // if (options?.multiple === 'ANY') {
+                    res.push(index);
+                    // s_index === l_index 时为严格匹配
+                    // } else if (s_index === l_index) {
+                    //     res.push(index);
+                    // }
                 }
             }
         });
