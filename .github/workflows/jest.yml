@@ -22,16 +22,29 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     
+    # 使用 node v16.x
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+          node-version: ${{ matrix.node-version }}
+    
+    # 缓存 pnpm 安装的包，节省时间
     - name: Cache pnpm modules
       uses: actions/cache@v2
+      env:
+          cache-name: cache-pnpm-modules
       with:
           path: ~/.pnpm-store
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ matrix.node-version }}-${{ hashFiles('**/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-
+              ${{ runner.os }}-build-${{ env.cache-name }}-${{ matrix.node-version }}-
+
             
+    # 安装 pnpm 及依赖库
     - uses: pnpm/action-setup@v2.0.1
       with:
         version: 6.20.4
         run_install: true
+        
+    # 自动化测试
     - run: pnpm run test
