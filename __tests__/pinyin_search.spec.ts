@@ -13,7 +13,7 @@ describe('拼音搜索工具 › multiple 参数', () => {
             multiple: 'ANY',
             ...options,
         });
-        expect(result).toEqual(['是1', '的']);
+        expect(result).toEqual(['的', '是1']);
     });
 
     test('全部匹配才返回', () => {

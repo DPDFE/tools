@@ -1,7 +1,7 @@
 import {dict} from './dict';
 import levenshtein from 'js-levenshtein';
 
-// 汉字 -> 拼音索引
+// 汉字 -> 拼音索引 eg: 省 -> 'sheng xing'
 const pinyin_map = new Map<string, string>();
 
 const chinese_regex = /.*[\u4e00-\u9fa5]+.*$/;
@@ -17,7 +17,7 @@ const pinyin_prefix = new Set<string>([
 ]);
 
 /**
- * 建立汉字 - 拼音索引 包含同个汉字的多发音
+ * 建立汉字 - 拼音索引 包含同个汉字的多发音pinyin_map
  */
 function create_pinyin_map() {
     for (const [key, characters] of Object.entries(dict)) {
@@ -58,8 +58,34 @@ export default function pinYinFuzzSearch<T>(
     const pinyin_list = getPinYinList(string_list);
 
     word.split(options.separator!).forEach((w) => {
-        if (chinese_regex.test(w)) {
-            // 中文转成拼音，再搜索
+        if (all_chinese_regex.test(w)) {
+            // 全是中文，直接匹配
+            // const index_arr: number[] = [];
+            // string_list.forEach((str, index) => {
+            //     if (str.includes(w)) {
+            //         index_arr.push(index);
+            //     }
+            // });
+
+            const index_arr = getMatchResult(
+                string_list.map((str) => str.split('')),
+                [w],
+                true,
+            );
+
+            let result_list = index_arr.map((index) => list[index]);
+
+            result_list = sortResult(result_list, w, options!);
+
+            [result, result_list] = intersectResult(
+                result_list,
+                result,
+                options,
+            );
+
+            result.push(...result_list);
+        } else if (chinese_regex.test(w)) {
+            // 部分中文，中文转成拼音再查找
 
             const _w = w
                 .split('')
@@ -74,56 +100,69 @@ export default function pinYinFuzzSearch<T>(
 
             const break_list = getAllPinyinBreak(0, _w);
 
-            const index_arr = getMatchResult(
-                pinyin_list,
-                break_list,
-                options as unknown as any,
-            );
+            const index_arr = getMatchResult(pinyin_list, break_list);
 
             let result_list = index_arr.map((index) => list[index]);
 
             result_list = sortResult(result_list, w, options!);
 
-            if (
-                options?.multiple === 'ALL' &&
-                result.length !== 0 &&
-                result_list.length !== 0
-            ) {
-                result_list = result_list.filter((r) => result.includes(r));
-                result = result.filter((r) => result_list.includes(r));
-            }
+            [result, result_list] = intersectResult(
+                result_list,
+                result,
+                options,
+            );
 
             result.push(...result_list);
         } else {
-            // 无中文时，用拼音分词查找
+            // 全是英文，用拼音分词查找
             const break_list = getAllPinyinBreak(0, w);
 
-            const index_arr = getMatchResult(
-                pinyin_list,
-                break_list,
-                options as unknown as any,
-            );
+            const index_arr = getMatchResult(pinyin_list, break_list);
 
             let result_list = index_arr.map((index) => list[index]);
 
             result_list = sortResult(result_list, w, options!);
 
-            if (
-                options?.multiple === 'ALL' &&
-                result.length !== 0 &&
-                result_list.length !== 0
-            ) {
-                result_list = result_list.filter((r) => result.includes(r));
-                result = result.filter((r) => result_list.includes(r));
-            }
+            [result, result_list] = intersectResult(
+                result_list,
+                result,
+                options,
+            );
 
             result.push(...result_list);
         }
     });
 
+    // RAW 需要无视分词排序
+    if (options.sort === 'RAW') {
+        return getRawResult([...new Set(result)], list);
+    }
+
     return [...new Set(result)];
 }
 
+/**
+ * 对结果求并集
+ * @param result_list - 当前的结果
+ * @param result - 上次的结果
+ * @param options - option
+ */
+function intersectResult<T>(
+    result_list: T[],
+    result: T[],
+    options?: PinYinFuzzSearchOption<T>,
+) {
+    if (
+        options?.multiple === 'ALL' &&
+        result.length !== 0 &&
+        result_list.length !== 0
+    ) {
+        result_list = result_list.filter((r) => result.includes(r));
+        result = result.filter((r) => result_list.includes(r));
+    }
+
+    return [result, result_list];
+}
 /**
  * 对返回结果排序
  *
@@ -136,41 +175,38 @@ function sortResult<T>(
     word: string,
     options: PinYinFuzzSearchOption<T>,
 ) {
+    const toText = options!.textProvider!;
     switch (options!.sort) {
         case 'RAW':
-            return result;
-            break;
-        case 'ASC':
-            return result.sort((a, b) =>
-                options!.textProvider!(a).localeCompare(
-                    options!.textProvider!(b),
-                ),
-            );
-            break;
+            // RAW不在这处理
+            result;
         case 'DESC':
-            return result.sort((a, b) =>
-                options!.textProvider!(b).localeCompare(
-                    options!.textProvider!(a),
-                ),
-            );
-            break;
+            return result.sort((a, b) => toText(b).localeCompare(toText(a)));
+        case 'ASC':
+            return result.sort((a, b) => toText(a).localeCompare(toText(b)));
         case 'AUTO':
+            // levenshtein -> 搜索词顺序 -> 结果词长度 -> 字母升序
             return result
-                .sort((a, b) =>
-                    options!.textProvider!(a).localeCompare(
-                        options!.textProvider!(b),
-                    ),
-                )
+                .sort((a, b) => toText(a).localeCompare(toText(b)))
+                .sort((a, b) => toText(a).length - toText(b).length)
                 .sort(
                     (a, b) =>
-                        levenshtein(word, options!.textProvider!(a)) -
-                        levenshtein(word, options!.textProvider!(b)),
+                        levenshtein(word, toText(a)) -
+                        levenshtein(word, toText(b)),
                 );
-            break;
         default:
             return result;
-            break;
     }
+}
+
+/**
+ * Raw 排序 完全按照输入顺序来排
+ *
+ * @param - 返回结果
+ * @param - 原list
+ */
+function getRawResult<T>(result: T[], list: T[]) {
+    return result.sort((a, b) => list.indexOf(a) - list.indexOf(b));
 }
 /**
  * 获取拼音转换后的list
@@ -227,13 +263,12 @@ function getAllPinyinBreak(begin: number, word: string, result: string[] = []) {
  *
  * @param pinyin_list - 拼音化的list
  * @param word_break - 分词后的word
- * @param list - 原list
- * @returns
+ * @param is_character - 是否是匹配汉字
  */
 function getMatchResult(
     pinyin_list: string[][],
     word_break: string[],
-    options: PinYinFuzzSearchOption<string>,
+    is_character = false,
 ) {
     const res: number[] = [];
 
@@ -241,7 +276,11 @@ function getMatchResult(
         word_break.forEach((word) => {
             let l_index = 0,
                 s_index = 0;
-            const single_word = word.split(' ');
+            let single_word: string | string[] = word;
+
+            if (!is_character) {
+                single_word = word.split(' ');
+            }
 
             while (l_index < list_word.length && s_index < single_word.length) {
                 if (
