@@ -88,6 +88,7 @@ export default function pinYinFuzzSearch<T>(
             // 部分中文，中文转成拼音再查找
 
             const _w = w
+                .toLowerCase()
                 .split('')
                 .map((c) => {
                     if (pinyin_map.has(c)) {
@@ -115,7 +116,7 @@ export default function pinYinFuzzSearch<T>(
             result.push(...result_list);
         } else {
             // 全是英文，用拼音分词查找
-            const break_list = getAllPinyinBreak(0, w);
+            const break_list = getAllPinyinBreak(0, w.toLowerCase());
 
             const index_arr = getMatchResult(pinyin_list, break_list);
 
@@ -218,7 +219,10 @@ function getPinYinList(list: string[]) {
         const pinyin_arr: string[] = [];
 
         for (const character of words) {
-            pinyin_arr.push(pinyin_map.get(character) ?? character);
+            pinyin_arr.push(
+                pinyin_map.get(character.toLowerCase()) ??
+                    character.toLowerCase(),
+            );
         }
 
         return pinyin_arr;
