@@ -86,8 +86,8 @@ describe('拼音搜索工具 › separator 参数', () => {
 
     test('默认值空格分割', () => {
         const word = '是 的';
-        const list = ['是的', '是我的', '的是吧'];
-        const expected = ['是的', '是我的', '的是吧'];
+        const list = ['是的', '是我的', '的吧'];
+        const expected = ['是的', '是我的'];
         const result = pinYinFuzzSearch(word, list, {
             separator: ' ',
             ...options,
@@ -121,6 +121,175 @@ describe('拼音搜索工具 › 功能', () => {
             separator: ',',
         });
         expect(result).toEqual(['是张三', '是李四']);
+    });
+
+    test('首字母匹配', () => {
+        const result = pinYinFuzzSearch(
+            'bj,tj,shs',
+            ['北京市', '天津市', '浙江省', '山西省', '上海市', '河北省'],
+            {
+                multiple: 'ANY',
+                separator: ',',
+            },
+        );
+        expect(result).toEqual(['北京市', '天津市', '上海市']);
+    });
+
+    test('多音字', () => {
+        const result_a = pinYinFuzzSearch(
+            'sdi',
+            ['是的', '使得', '似的', '师德', '好的', '湿地'],
+            {
+                sort: 'RAW',
+            },
+        );
+        expect(result_a).toEqual(['是的', '似的', '湿地']);
+    });
+
+    test('首字母，多音字', () => {
+        const result_a = pinYinFuzzSearch(
+            'njszj,ddxz',
+            ['南京市长江大桥', '南京市长', '长江大桥', '东躲西藏', '西藏'],
+            {
+                multiple: 'ANY',
+                separator: ',',
+            },
+        );
+        const result_b = pinYinFuzzSearch(
+            'njscj,xc',
+            ['南京市长江大桥', '南京市长', '长江大桥', '东躲西藏', '西藏'],
+            {
+                multiple: 'ANY',
+                separator: ',',
+                sort: 'RAW',
+            },
+        );
+        expect(result_a).toEqual(['南京市长江大桥', '东躲西藏']);
+        expect(result_b).toEqual(['南京市长江大桥', '东躲西藏', '西藏']);
+    });
+
+    test('中文拼音混输', () => {
+        const result_a = pinYinFuzzSearch(
+            '是我de',
+            ['是的', '我的', '是我的', '是的我', '不是我的', '是不我的'],
+            {
+                sort: 'RAW',
+            },
+        );
+        const result_b = pinYinFuzzSearch(
+            '是wo的',
+            ['是的', '我的', '是我的', '是的我', '不是我的', '是不我的'],
+            {
+                sort: 'RAW',
+            },
+        );
+        const result_c = pinYinFuzzSearch(
+            'shi我的',
+            ['是的', '我的', '是我的', '是的我', '不是我的', '是不我的'],
+            {
+                sort: 'RAW',
+            },
+        );
+        const result_d = pinYinFuzzSearch(
+            'shi我de',
+            ['是的', '我的', '是我的', '是的我', '不是我的', '是不我的'],
+            {
+                sort: 'RAW',
+            },
+        );
+        const result_e = pinYinFuzzSearch(
+            'si我de',
+            ['是的', '我的', '是我的', '是的我', '不是我的', '是不我的'],
+            {
+                sort: 'RAW',
+            },
+        );
+        expect(result_a).toEqual(['是我的', '不是我的', '是不我的']);
+        expect(result_b).toEqual(['是我的', '不是我的', '是不我的']);
+        expect(result_c).toEqual(['是我的', '不是我的', '是不我的']);
+        expect(result_d).toEqual(['是我的', '不是我的', '是不我的']);
+        expect(result_e).toEqual([]);
+    });
+
+    test('中文拼音首字母混输', () => {
+        const result_a = pinYinFuzzSearch(
+            '是我d',
+            ['是的', '我的', '是我的', '是的我', '不是我的', '是不我的'],
+            {
+                sort: 'RAW',
+            },
+        );
+        const result_b = pinYinFuzzSearch(
+            '是w的',
+            ['是的', '我的', '是我的', '是的我', '不是我的', '是不我的'],
+            {
+                sort: 'RAW',
+            },
+        );
+        const result_c = pinYinFuzzSearch(
+            's我的',
+            ['是的', '我的', '是我的', '是的我', '不是我的', '是不我的'],
+            {
+                sort: 'RAW',
+            },
+        );
+        const result_d = pinYinFuzzSearch(
+            's我d',
+            ['是的', '我的', '是我的', '是的我', '不是我的', '是不我的'],
+            {
+                sort: 'RAW',
+            },
+        );
+
+        expect(result_a).toEqual(['是我的', '不是我的', '是不我的']);
+        expect(result_b).toEqual(['是我的', '不是我的', '是不我的']);
+        expect(result_c).toEqual(['是我的', '不是我的', '是不我的']);
+        expect(result_d).toEqual(['是我的', '不是我的', '是不我的']);
+    });
+
+    test('长列表匹配', () => {
+        const list = [
+            '石室诗士施氏',
+            '嗜狮',
+            '誓食十狮',
+            '施氏时时适市视狮',
+            '十时',
+            '适十狮适市',
+            '是时',
+            '适施氏适市',
+            '施氏视是十狮',
+            '恃矢势',
+            '使是十狮逝世',
+            '氏拾是十狮尸',
+            '适石室',
+            '石室湿',
+            '氏使侍拭石室',
+            '石室拭',
+            '施氏始试食是十狮尸',
+            '食时',
+            '始识是十狮尸',
+            '实十石狮尸',
+            '试释是事',
+        ];
+        const mut = 100;
+
+        const result_a = pinYinFuzzSearch(
+            'shishi',
+            Array.from(
+                {length: list.length * mut},
+                (_, i) => list[i % list.length] + i,
+            ),
+            {
+                sort: 'RAW',
+            },
+        );
+
+        expect(result_a).toEqual(
+            Array.from(
+                {length: list.length * mut},
+                (_, i) => list[i % list.length] + i,
+            ),
+        );
     });
 
     test('无匹配结果时返回空数组', () => {
