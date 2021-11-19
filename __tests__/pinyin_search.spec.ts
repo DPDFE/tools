@@ -297,6 +297,18 @@ describe('拼音搜索工具 › 功能', () => {
         expect(result).toEqual([]);
     });
 
+    test('English', () => {
+        const result = pinYinFuzzSearch('de', [
+            'Not Identified',
+            'Closed',
+            'Communicated',
+            'Identified',
+            'Resolved',
+            'Cancelled',
+        ]);
+        expect(result).toEqual(['Identified', 'Not Identified']);
+    });
+
     test('自定义供用户匹配的字段', () => {
         const result = pinYinFuzzSearch(
             'ls',

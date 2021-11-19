@@ -10,10 +10,10 @@ const all_chinese_regex = /^[\u4e00-\u9fa5]+$/;
 
 const all_pinyin = Object.keys(dict);
 
-// 所有拼音及拼音首字母，用于分词
+// 所有拼音及二十六个字母，用于分词和英文匹配
 const pinyin_prefix = new Set<string>([
     ...all_pinyin,
-    ...all_pinyin.map((w) => w[0]),
+    ...Array.from({length: 26}, (_, i) => String.fromCharCode(97 + i)),
 ]);
 
 /**
@@ -243,15 +243,15 @@ function getAllPinyinBreak(begin: number, word: string, result: string[] = []) {
     let word_break: string[] = [];
 
     for (let i = begin; i < word.length; i++) {
-        const s_word = word.substring(begin, i + 1);
+        const s_word = word.substring(begin, i + 1).toLowerCase();
 
         if (pinyin_prefix.has(s_word)) {
             result.push(s_word);
-            word_break = getAllPinyinBreak(i + 1, word, result);
+            word_break.push(...getAllPinyinBreak(i + 1, word, result));
             result.pop();
         } else if (!isNaN(Number(s_word))) {
             result.push(s_word);
-            word_break = getAllPinyinBreak(i + 1, word, result);
+            word_break.push(...getAllPinyinBreak(i + 1, word, result));
         }
     }
 
