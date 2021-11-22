@@ -247,6 +247,71 @@ describe('拼音搜索工具 › 功能', () => {
         expect(result_d).toEqual(['是我的', '不是我的', '是不我的']);
     });
 
+    test('花名匹配', () => {
+        const result_a = pinYinFuzzSearch(
+            'zhangsan01',
+            ['张三01', '张三02', '张三03', '李四01', '李四02', '王五03'],
+            {
+                sort: 'RAW',
+            },
+        );
+        const result_b = pinYinFuzzSearch(
+            'zs01',
+            ['张三01', '张三02', '张三03', '李四01', '李四02', '王五03'],
+            {
+                sort: 'RAW',
+            },
+        );
+        const result_c = pinYinFuzzSearch(
+            'zhangsan',
+            [
+                'zhangsan01',
+                'zhangsan02',
+                'zhangsan03',
+                'lisi01',
+                'lisi02',
+                'wangwu03',
+            ],
+            {
+                sort: 'RAW',
+            },
+        );
+        const result_d = pinYinFuzzSearch(
+            'zhangsan01',
+            [
+                'zhangsan01',
+                'zhangsan02',
+                'zhangsan03',
+                'lisi01',
+                'lisi02',
+                'wangwu03',
+            ],
+            {
+                sort: 'RAW',
+            },
+        );
+        const result_e = pinYinFuzzSearch(
+            'zs01',
+            [
+                'zhangsan01',
+                'zhangsan02',
+                'zhangsan03',
+                'lisi01',
+                'lisi02',
+                'wangwu03',
+            ],
+            {
+                sort: 'RAW',
+            },
+        );
+
+        expect(result_a).toEqual(['张三01']);
+        expect(result_b).toEqual(['张三01']);
+        expect(result_c).toEqual(['zhangsan01', 'zhangsan02', 'zhangsan03']);
+        expect(result_d).toEqual(['zhangsan01']);
+        expect(result_e).toEqual(['zhangsan01']);
+    });
+
     test('长列表匹配', () => {
         const list = [
             '石室诗士施氏',

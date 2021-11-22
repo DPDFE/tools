@@ -256,6 +256,7 @@ function getAllPinyinBreak(begin: number, word: string, result: string[] = []) {
         } else if (!isNaN(Number(s_word))) {
             result.push(s_word);
             word_break.push(...getAllPinyinBreak(i + 1, word, result));
+            result.pop();
         }
     }
 
