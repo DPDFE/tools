@@ -9,8 +9,7 @@
         "lint:fix": "prettier --loglevel=error -w src",
         "lint:script": "eslint --fix --ext .ts,tsx src",
         "lint:style": "stylelint --fix src/**/*.{css,less}",
-        "test": "jest",
-        "preinstall": "npx -y only-allow pnpm"
+        "test": "jest"
     },
     "main": "dist/tools.umd.js",
     "module": "dist/main.js",
