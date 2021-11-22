@@ -2,8 +2,6 @@
 
 import pinYinFuzzSearch, {PinYinFuzzSearchOption} from '../src/pinyin_search';
 
-// 按微信搜索联系人的规则
-
 describe('拼音搜索工具 › multiple 参数', () => {
     // 为避免返回顺序导致测试结果不一致，这里将sort参数强制保持原始顺序
     const options: PinYinFuzzSearchOption<string> = {sort: 'RAW'};
