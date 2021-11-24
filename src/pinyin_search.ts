@@ -269,7 +269,7 @@ function getPinYinList(list: string[]) {
     const pinyin_list = (list as unknown as string[]).map((words) => {
         const pinyin_arr: string[] = [];
 
-        for (const character of words) {
+        for (const character of words.toString()) {
             pinyin_arr.push(
                 pinyin_map.get(character.toLowerCase()) ??
                     character.toLowerCase(),
