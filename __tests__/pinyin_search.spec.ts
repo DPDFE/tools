@@ -372,6 +372,11 @@ describe('拼音搜索工具 › 功能', () => {
         expect(result).toEqual(['Identified', 'Not Identified']);
     });
 
+    test('Number', () => {
+        const result = pinYinFuzzSearch('1', [1, 2, 3, 4]);
+        expect(result).toEqual([1]);
+    });
+
     test('自定义供用户匹配的字段', () => {
         const result = pinYinFuzzSearch(
             'ls',

@@ -266,7 +266,7 @@ function getRawResult<T>(result: T[], list: T[]) {
  * @param list - 在哪个数组中搜索
  */
 function getPinYinList(list: string[]) {
-    const pinyin_list = (list as unknown as string[]).map((words) => {
+    const pinyin_list = list.map((words) => {
         const pinyin_arr: string[] = [];
 
         for (const character of words.toString()) {
