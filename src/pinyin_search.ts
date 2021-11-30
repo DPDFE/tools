@@ -79,6 +79,7 @@ export default function pinYinFuzzSearch<T>(
 
             const index_arr = getMatchResult(
                 string_list.map((str) => str.split('')),
+                word,
                 [w],
                 match_weight_index,
                 true,
@@ -196,6 +197,7 @@ function getResultList<T>(
 
         const index_arr = getMatchResult(
             _pinyin_list,
+            word,
             _break_list,
             match_weight_index,
         );
@@ -206,6 +208,7 @@ function getResultList<T>(
 
     const index_arr = getMatchResult(
         _pinyin_list,
+        word,
         break_list,
         match_weight_index,
     );
@@ -375,6 +378,7 @@ function getAllPinyinBreak(begin: number, word: string, result: string[] = []) {
  */
 function getMatchResult(
     pinyin_list: string[][],
+    word: string,
     word_break: string[],
     match_weight_index: Record<string, number>,
     is_character = false,
@@ -389,6 +393,17 @@ function getMatchResult(
     }
 
     pinyin_list.forEach((list_word: string[], index) => {
+        const original_word = list_word.join('');
+        const original_index = original_word.indexOf(word);
+
+        // 提前进行一次不间隔非模糊匹配，降低匹配复杂度
+        if (original_index !== -1) {
+            res.push(index);
+            match_weight_index[index] = original_index;
+
+            return;
+        }
+
         word_break.forEach((word) => {
             let l_index = 0,
                 s_index = 0;
