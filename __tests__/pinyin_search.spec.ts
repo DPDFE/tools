@@ -49,6 +49,17 @@ describe('拼音搜索工具 › sort 参数', () => {
         expect(result).toEqual(expected);
     });
 
+    test('按照匹配词位置优先排序', () => {
+        const result = pinYinFuzzSearch(
+            'sx',
+            ['江苏省', '四川省', '山西省', '陕西省'],
+            {
+                sort: 'AUTO',
+            },
+        );
+        expect(result).toEqual(['山西省', '陕西省', '江苏省', '四川省']);
+    });
+
     test('升序返回', () => {
         const result = pinYinFuzzSearch('是的', ['是的2', '是的', '是的1'], {
             sort: 'ASC',
