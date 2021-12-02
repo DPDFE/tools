@@ -62,6 +62,11 @@ export default function pinYinFuzzSearch<T>(
 
     const pinyin_list = getPinYinList(string_list);
 
+    // 保存匹配词的位置，拼音先匹配的优先 如：sx -> 山西省排在应四川省前面
+    const match_weight_index: Record<number, number> = {};
+    // 匹配词位置权重
+    const match_weight: Map<T, number> = new Map();
+
     word.split(options.separator!).forEach((w) => {
         if (all_chinese_regex.test(w)) {
             // 全是中文，直接匹配
@@ -74,13 +79,22 @@ export default function pinYinFuzzSearch<T>(
 
             const index_arr = getMatchResult(
                 string_list.map((str) => str.split('')),
+                word,
                 [w],
+                match_weight_index,
                 true,
             );
 
             let result_list = index_arr.map((index) => list[index]);
 
-            result_list = sortResult(result_list, w, options!);
+            Object.keys(match_weight_index).forEach((key) => {
+                match_weight.set(
+                    list[parseInt(key)],
+                    match_weight_index[parseInt(key)],
+                );
+            });
+
+            result_list = sortResult(result_list, w, options!, match_weight);
 
             [result, result_list] = intersectResult(
                 result_list,
@@ -104,9 +118,15 @@ export default function pinYinFuzzSearch<T>(
                 .join('')
                 .trim();
 
-            let result_list = getResultList(pinyin_list, list, _w);
+            let result_list = getResultList(
+                pinyin_list,
+                list,
+                _w,
+                match_weight_index,
+                match_weight,
+            );
 
-            result_list = sortResult(result_list, w, options!);
+            result_list = sortResult(result_list, w, options!, match_weight);
 
             [result, result_list] = intersectResult(
                 result_list,
@@ -117,9 +137,15 @@ export default function pinYinFuzzSearch<T>(
             result.push(...result_list);
         } else {
             // 全是英文，用拼音分词查找
-            let result_list = getResultList(pinyin_list, list, w);
+            let result_list = getResultList(
+                pinyin_list,
+                list,
+                w,
+                match_weight_index,
+                match_weight,
+            );
 
-            result_list = sortResult(result_list, w, options!);
+            result_list = sortResult(result_list, w, options!, match_weight);
 
             [result, result_list] = intersectResult(
                 result_list,
@@ -146,7 +172,13 @@ export default function pinYinFuzzSearch<T>(
  * @param - 在哪个数组中搜索
  * @param -  搜索词
  */
-function getResultList<T>(pinyin_list: string[][], list: T[], word: string) {
+function getResultList<T>(
+    pinyin_list: string[][],
+    list: T[],
+    word: string,
+    match_weight_index: Record<number, number>,
+    match_weight: Map<T, number>,
+) {
     // 对搜索input拼音分词
     const break_list = getAllPinyinBreak(0, word.toLowerCase());
 
@@ -163,13 +195,30 @@ function getResultList<T>(pinyin_list: string[][], list: T[], word: string) {
             word.toLowerCase().substring(0, 5),
         );
 
-        const index_arr = getMatchResult(_pinyin_list, _break_list);
+        const index_arr = getMatchResult(
+            _pinyin_list,
+            word,
+            _break_list,
+            match_weight_index,
+        );
 
         _pinyin_list = index_arr.map((index) => _pinyin_list[index]);
         _list = index_arr.map((index) => _list[index]);
     }
 
-    const index_arr = getMatchResult(_pinyin_list, break_list);
+    const index_arr = getMatchResult(
+        _pinyin_list,
+        word,
+        break_list,
+        match_weight_index,
+    );
+
+    Object.keys(match_weight_index).forEach((key) => {
+        match_weight.set(
+            list[parseInt(key)],
+            match_weight_index[parseInt(key)],
+        );
+    });
 
     const result_list = index_arr.map((index) => _list[index]);
 
@@ -211,6 +260,7 @@ function sortResult<T>(
     result: T[],
     word: string,
     options: PinYinFuzzSearchOption<T>,
+    match_weight: Map<T, number>,
 ) {
     const toText = options!.textProvider!;
 
@@ -223,20 +273,25 @@ function sortResult<T>(
         case 'ASC':
             return result.sort((a, b) => toText(a).localeCompare(toText(b)));
         case 'AUTO':
-            // levenshtein -> 搜索词顺序 -> 结果词长度 -> 字母升序
+            // levenshtein -> 搜索词顺序 -> 结果词长度 -> 字母升序 -> 匹配词位置
             return result.sort((a, b) => {
-                const comp = toText(a).localeCompare(toText(b));
-                if (!comp) {
-                    const len = toText(a).length - toText(b).length;
-                    if (!len) {
-                        return (
-                            levenshtein(word, toText(a)) -
-                            levenshtein(word, toText(b))
-                        );
+                const position = match_weight.get(a)! - match_weight.get(b)!;
+
+                if (position === 0) {
+                    const comp = toText(a).localeCompare(toText(b));
+                    if (!comp) {
+                        const len = toText(a).length - toText(b).length;
+                        if (!len) {
+                            return (
+                                levenshtein(word, toText(a)) -
+                                levenshtein(word, toText(b))
+                            );
+                        }
+                        return len;
                     }
-                    return len;
+                    return comp;
                 }
-                return comp;
+                return position;
             });
 
         default:
@@ -323,7 +378,9 @@ function getAllPinyinBreak(begin: number, word: string, result: string[] = []) {
  */
 function getMatchResult(
     pinyin_list: string[][],
+    word: string,
     word_break: string[],
+    match_weight_index: Record<string, number>,
     is_character = false,
 ) {
     const res: number[] = [];
@@ -336,6 +393,17 @@ function getMatchResult(
     }
 
     pinyin_list.forEach((list_word: string[], index) => {
+        const original_word = list_word.join('');
+        const original_index = original_word.indexOf(word);
+
+        // 提前进行一次不间隔非模糊匹配，降低匹配复杂度
+        if (original_index !== -1) {
+            res.push(index);
+            match_weight_index[index] = original_index;
+
+            return;
+        }
+
         word_break.forEach((word) => {
             let l_index = 0,
                 s_index = 0;
@@ -364,6 +432,7 @@ function getMatchResult(
 
                 if (s_index === single_word.length) {
                     res.push(index);
+                    match_weight_index[index] = l_index;
                     return;
                     // s_index === l_index 时为严格匹配
                     // } else if (s_index === l_index) {
