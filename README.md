@@ -2,6 +2,7 @@
 
 纯 js 工具库
 
+[![npm-image](https://img.shields.io/npm/v/@dpdfe/tools.svg?style=flat-square)](https://www.npmjs.com/package/@dpdfe/tools)
 ![Test Status](https://github.com/DPDFE/tools/actions/workflows/jest.yml/badge.svg?1)
 
 # 拼音模糊搜索
