@@ -27,6 +27,9 @@ specifiers:
   vite: ^2.6.4
   vue: '3'
 
+dependencies:
+  js-levenshtein: 1.1.6
+
 devDependencies:
   '@types/jest': registry.nlark.com/@types/jest/27.0.2
   '@types/js-levenshtein': 1.1.0
@@ -41,7 +44,6 @@ devDependencies:
   eslint-plugin-jsdoc: registry.npmmirror.com/eslint-plugin-jsdoc/37.0.3_eslint@8.2.0
   eslint-plugin-prettier: registry.npmmirror.com/eslint-plugin-prettier/4.0.0_307f015733298e29da9050ea0cee5b9e
   jest: registry.npmmirror.com/jest/27.3.1_ts-node@10.4.0
-  js-levenshtein: 1.1.6
   npm-run-all: registry.npmmirror.com/npm-run-all/4.1.5
   prettier: registry.nlark.com/prettier/2.4.1
   stylelint: registry.npmmirror.com/stylelint/14.0.1
@@ -169,7 +171,7 @@ packages:
   /js-levenshtein/1.1.6:
     resolution: {integrity: sha512-X2BB11YZtrRqY4EnQcLX5Rh373zbK4alC1FW7D7MBhL2gtcC17cTnr6DmfHZeS0s2rTHjUTMMHfG7gO8SSdw+g==}
     engines: {node: '>=0.10.0'}
-    dev: true
+    dev: false
 
   /magic-string/0.25.7:
     resolution: {integrity: sha512-4CrMT5DOHTDk4HYDlzmwu4FVCcIYI8gauveasrdCu2IKIFOJ3f0v/8MDGJCDL9oD2ppz/Av1b0Nj345H9M+XIA==}
