@@ -1,6 +1,6 @@
 {
     "name": "@dpdfe/tools",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "scripts": {
         "dev": "vite",
         "build": "NODE_ENV=production vite build && tsc -p tsconfig.json && tsc-alias -p tsconfig.json",

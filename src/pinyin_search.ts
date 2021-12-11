@@ -67,6 +67,8 @@ export default function pinYinFuzzSearch<T>(
     // 匹配词位置权重
     const match_weight: Map<T, number> = new Map();
 
+    word = word.toLowerCase();
+
     word.split(options.separator!).forEach((w) => {
         if (all_chinese_regex.test(w)) {
             // 全是中文，直接匹配
