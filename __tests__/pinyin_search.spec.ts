@@ -1,6 +1,9 @@
 /// <reference types="jest" />
 
-import pinYinFuzzSearch, {PinYinFuzzSearchOption} from '../src/pinyin_search';
+import pinYinFuzzSearch, {
+    PinYinFuzzSearchOption,
+    pinyinFuzzySearchAdvance,
+} from '../src/pinyin_search';
 
 describe('拼音搜索工具 › multiple 参数', () => {
     // 为避免返回顺序导致测试结果不一致，这里将sort参数强制保持原始顺序
@@ -137,7 +140,7 @@ describe('拼音搜索工具 › 功能', () => {
                 separator: ',',
             },
         );
-        expect(result).toEqual(['北京市', '天津市', '上海市']);
+        expect(result).toEqual(['北京市', '天津市', '上海市', '山西省']);
     });
 
     test('多音字', () => {
@@ -341,7 +344,7 @@ describe('拼音搜索工具 › 功能', () => {
             '实十石狮尸',
             '试释是事',
         ];
-        const mut = 100;
+        const mut = 500;
 
         const result_a = pinYinFuzzSearch(
             'shishi',
@@ -406,5 +409,55 @@ describe('拼音搜索工具 › 功能', () => {
             },
         );
         expect(result).toEqual([{name: '是李四', id: 2}]);
+    });
+});
+describe('拼音搜索工具 › 高级', () => {
+    test('中文，返回匹配位置', () => {
+        const result = pinyinFuzzySearchAdvance('是三', ['是张三', '是李四']);
+        const expected = new Map().set('是张三', [0, 2]);
+        expect(result.position).toEqual(expected);
+    });
+
+    test('拼音，返回匹配位置', () => {
+        const result = pinyinFuzzySearchAdvance('zhangsan', [
+            '是张三',
+            '是李四',
+            '历史',
+            '张三啊',
+            '01张三',
+        ]);
+
+        const expected = new Map()
+            .set('是张三', [1, 2])
+            .set('张三啊', [0, 1])
+            .set('01张三', [2, 3]);
+
+        expect(result.position).toEqual(expected);
+    });
+
+    test('拼音首字母，返回匹配位置', () => {
+        const result = pinyinFuzzySearchAdvance('ls', [
+            '是张三',
+            '是李四',
+            '历史',
+        ]);
+
+        const expected = new Map().set('是李四', [1, 2]).set('历史', [0, 1]);
+
+        expect(result.position).toEqual(expected);
+    });
+
+    test('拼音汉字组合，返回匹配位置', () => {
+        const result = pinyinFuzzySearchAdvance('是s', [
+            '是张111三',
+            '是李四',
+            '历史',
+        ]);
+
+        const expected = new Map()
+            .set('是李四', [0, 2])
+            .set('是张111三', [0, 5]);
+
+        expect(result.position).toEqual(expected);
     });
 });

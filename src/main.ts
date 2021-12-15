@@ -1,2 +1,2 @@
-import pinYinFuzzSearch from './pinyin_search';
-export {pinYinFuzzSearch};
+import pinYinFuzzSearch, {pinyinFuzzySearchAdvance} from './pinyin_search';
+export {pinYinFuzzSearch, pinyinFuzzySearchAdvance};
