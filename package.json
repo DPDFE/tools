@@ -1,6 +1,6 @@
 {
     "name": "@dpdfe/tools",
-    "version": "0.0.8",
+    "version": "0.0.9",
     "scripts": {
         "dev": "vite",
         "build": "NODE_ENV=production vite build && tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
@@ -9,6 +9,7 @@
         "lint:fix": "prettier --loglevel=error -w src",
         "lint:script": "eslint --fix --ext .ts,tsx src",
         "lint:style": "stylelint --fix src/**/*.{css,less}",
+        "pub": "npm run build && npm publish",
         "test": "jest"
     },
     "main": "dist/tools.umd.js",

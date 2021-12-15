@@ -70,12 +70,14 @@ export default function pinYinFuzzSearch<T>(
 export function pinyinFuzzySearchAdvance<T>(
     word: string,
     list: T[],
-    options?: PinYinFuzzAdvanceSearchOption<T>,
+    options?: PinYinFuzzSearchOption<T>,
     advance = true,
 ) {
     word = word.toLowerCase();
-    options = _mergedDefaultOption(options);
-    options.advance = advance;
+    options = _mergedDefaultOption(
+        advance,
+        options,
+    ) as PinYinFuzzAdvanceSearchOption<T>;
 
     let result: T[] = [];
 
@@ -621,12 +623,14 @@ function getMatchResult<T>(
  * @param options - 用户提供的配置
  */
 function _mergedDefaultOption<T>(
+    advance: boolean,
     options?: PinYinFuzzSearchOption<T>,
-): Required<PinYinFuzzSearchOption<T>> {
+): Required<PinYinFuzzAdvanceSearchOption<T>> {
     return {
         sort: options?.sort ?? 'AUTO',
         multiple: options?.multiple ?? 'ALL',
         separator: options?.separator ?? ' ',
+        advance,
         /**
          * 由用户提供进行匹配的字符串字段
          *
