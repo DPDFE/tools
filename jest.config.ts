@@ -16,5 +16,6 @@ export default {
         'src/**/*.{ts,tsx,js,jsx}',
         '!src/**/*.d.ts',
         '!src/main.ts',
+        '!src/index.ts',
     ],
 } as InitialOptionsTsJest;

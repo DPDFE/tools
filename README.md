@@ -14,6 +14,7 @@
 -   支持排序结果排序
 -   支持多词同时搜索
 -   支持设置多词同时搜索时的排序策略和分隔符
+-   支持返回匹配位置
 
 如果您使用 React + Antd，还可以使用以下库对，Antd中的Select等一键支持拼音搜索功能：
 
@@ -127,6 +128,17 @@ pinYinFuzzSearch('dd xc', ['东躲', '西藏', '东躲西藏'], { multiple: 'ALL
 // output: ['东躲西藏']
 ```
 
+-   返回匹配位置
+
+```
+import {pinyinFuzzySearchAdvance} from '@dpdfe/tools';
+pinyinFuzzySearchAdvance('bj', ['北京市', '是北京']);
+// output: {
+    result: ['北京市', '是北京'],
+    position: Map({'北京市':[0, 1], '是北京': [1, 2]})
+}
+```
+
 -   自定义匹配字段
 
 ```
@@ -165,6 +177,14 @@ pinYinFuzzSearch<T>(
     list: T[],
     options?: PinYinFuzzSearchOption<T>,
 ): T[]
+pinyinFuzzySearchAdvance<T>(
+    word: string,
+    list: T[],
+    options?: PinYinFuzzSearchOption<T>,
+): {
+    result: T[];
+    position: Map<T, number[]>;
+}
 ```
 
 | 参数    | 类型                       | 说明                             | 默认值 |

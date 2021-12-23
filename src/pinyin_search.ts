@@ -10,6 +10,9 @@ const all_chinese_regex = /^[\u4e00-\u9fa5]+$/;
 
 const all_pinyin = Object.keys(dict);
 
+/** 多音节声母也应用于分词 */
+const additional_pinyin_prefix = ['zh', 'ch', 'sh'];
+
 /**
  * 所有拼音和拼音首字母
  * 用于分词和英文匹配
@@ -17,6 +20,7 @@ const all_pinyin = Object.keys(dict);
  */
 const pinyin_prefix = new Set<string>([
     ...all_pinyin,
+    ...additional_pinyin_prefix,
     ...all_pinyin.map((pinyin) => pinyin[0]),
     // ...Array.from({length: 26}, (_, i) => String.fromCharCode(97 + i)),
 ]);
@@ -52,8 +56,29 @@ export default function pinYinFuzzSearch<T>(
     word: string,
     list: T[],
     options?: PinYinFuzzSearchOption<T>,
-): T[] {
-    options = _mergedDefaultOption(options);
+) {
+    return pinyinFuzzySearchAdvance(word, list, options, false).result;
+}
+
+/**
+ * 高级拼音模糊搜索，返回匹配位置等更多信息`性能消耗会增加`
+ *
+ * @param word - 搜索词
+ * @param list - 在哪个数组中搜索
+ * @param options - 搜索配置项
+ */
+export function pinyinFuzzySearchAdvance<T>(
+    word: string,
+    list: T[],
+    options?: PinYinFuzzSearchOption<T>,
+    advance = true,
+) {
+    word = word.toLowerCase();
+    options = _mergedDefaultOption(
+        advance,
+        options,
+    ) as PinYinFuzzAdvanceSearchOption<T>;
+
     let result: T[] = [];
 
     if (pinyin_map.size === 0) create_pinyin_map();
@@ -62,12 +87,20 @@ export default function pinYinFuzzSearch<T>(
 
     const pinyin_list = getPinYinList(string_list);
 
-    // 保存匹配词的位置，拼音先匹配的优先 如：sx -> 山西省排在应四川省前面
+    // 保存匹配词的位置，拼音先匹配的优先 如：sx -> 山西省 应排在 四川省 前面
     const match_weight_index: Record<number, number> = {};
     // 匹配词位置权重
     const match_weight: Map<T, number> = new Map();
 
-    word = word.toLowerCase();
+    // 匹配词位置，用于高亮
+    const match_position_index: number[][] = [];
+    // 匹配词位置
+    const match_position: Map<T, number[]> = new Map();
+
+    // 连续词个数，优先匹配连续的词 eg: dsj -> 学大数据 应排在 大学数据 前面
+    const consecutive_match_index: Record<number, number> = {};
+    // 连续词个数权重
+    const consecutive_match_weight: Map<T, number> = new Map();
 
     word.split(options.separator!).forEach((w) => {
         if (all_chinese_regex.test(w)) {
@@ -82,21 +115,38 @@ export default function pinYinFuzzSearch<T>(
             const index_arr = getMatchResult(
                 string_list.map((str) => str.split('')),
                 word,
+                options!,
                 [w],
                 match_weight_index,
+                match_position_index,
+                consecutive_match_index,
                 true,
             );
 
             let result_list = index_arr.map((index) => list[index]);
 
-            Object.keys(match_weight_index).forEach((key) => {
+            Object.keys(match_weight_index).forEach((key, index) => {
                 match_weight.set(
                     list[parseInt(key)],
                     match_weight_index[parseInt(key)],
                 );
+                consecutive_match_weight.set(
+                    list[parseInt(key)],
+                    consecutive_match_index[parseInt(key)],
+                );
+                match_position.set(
+                    list[parseInt(key)],
+                    match_position_index[index],
+                );
             });
 
-            result_list = sortResult(result_list, w, options!, match_weight);
+            result_list = sortResult(
+                result_list,
+                w,
+                options!,
+                match_weight,
+                consecutive_match_weight,
+            );
 
             [result, result_list] = intersectResult(
                 result_list,
@@ -124,11 +174,22 @@ export default function pinYinFuzzSearch<T>(
                 pinyin_list,
                 list,
                 _w,
+                options!,
                 match_weight_index,
                 match_weight,
+                match_position_index,
+                match_position,
+                consecutive_match_index,
+                consecutive_match_weight,
             );
 
-            result_list = sortResult(result_list, w, options!, match_weight);
+            result_list = sortResult(
+                result_list,
+                w,
+                options!,
+                match_weight,
+                consecutive_match_weight,
+            );
 
             [result, result_list] = intersectResult(
                 result_list,
@@ -143,11 +204,22 @@ export default function pinYinFuzzSearch<T>(
                 pinyin_list,
                 list,
                 w,
+                options!,
                 match_weight_index,
                 match_weight,
+                match_position_index,
+                match_position,
+                consecutive_match_index,
+                consecutive_match_weight,
             );
 
-            result_list = sortResult(result_list, w, options!, match_weight);
+            result_list = sortResult(
+                result_list,
+                w,
+                options!,
+                match_weight,
+                consecutive_match_weight,
+            );
 
             [result, result_list] = intersectResult(
                 result_list,
@@ -161,25 +233,44 @@ export default function pinYinFuzzSearch<T>(
 
     // RAW 需要无视分词排序
     if (options.sort === 'RAW') {
-        return getRawResult([...new Set(result)], list);
+        return {
+            result: getRawResult([...new Set(result)], list),
+            position: match_position,
+        };
     }
 
-    return [...new Set(result)];
+    return {
+        result: [...new Set(result)],
+        position: match_position,
+    };
 }
 
 /**
  * 获取拼音分词后的匹配结果
  *
- * @param  - 拼音化的带匹配词
- * @param - 在哪个数组中搜索
- * @param -  搜索词
+ * @param pinyin_list - 拼音化的带匹配词
+ * @param list - 原始list
+ * @param word - 待匹配词
+ * @param options - 配置
+ * @param match_weight_index - 匹配词权重array
+ * @param match_weight - 匹配词权重map
+ * @param match_position_index - 匹配词位置array
+ * @param match_position - 匹配词位置map
+ * @param consecutive_match_index - 连续匹配array
+ * @param consecutive_match_weight - 连续匹配权重map
+ * @returns
  */
 function getResultList<T>(
     pinyin_list: string[][],
     list: T[],
     word: string,
+    options: PinYinFuzzAdvanceSearchOption<T>,
     match_weight_index: Record<number, number>,
     match_weight: Map<T, number>,
+    match_position_index: number[][],
+    match_position: Map<T, number[]>,
+    consecutive_match_index: Record<number, number>,
+    consecutive_match_weight: Map<T, number>,
 ) {
     // 对搜索input拼音分词
     const break_list = getAllPinyinBreak(0, word.toLowerCase());
@@ -200,8 +291,11 @@ function getResultList<T>(
         const index_arr = getMatchResult(
             _pinyin_list,
             word,
+            options,
             _break_list,
             match_weight_index,
+            match_position_index,
+            consecutive_match_index,
         );
 
         _pinyin_list = index_arr.map((index) => _pinyin_list[index]);
@@ -211,15 +305,23 @@ function getResultList<T>(
     const index_arr = getMatchResult(
         _pinyin_list,
         word,
+        options,
         break_list,
         match_weight_index,
+        match_position_index,
+        consecutive_match_index,
     );
 
-    Object.keys(match_weight_index).forEach((key) => {
+    Object.keys(match_weight_index).forEach((key, index) => {
         match_weight.set(
             list[parseInt(key)],
             match_weight_index[parseInt(key)],
         );
+        consecutive_match_weight.set(
+            list[parseInt(key)],
+            consecutive_match_index[parseInt(key)],
+        );
+        match_position.set(list[parseInt(key)], match_position_index[index]);
     });
 
     const result_list = index_arr.map((index) => _list[index]);
@@ -255,14 +357,18 @@ function intersectResult<T>(
  * 对返回结果排序
  *
  * @param result - 返回结果
- * @param word - 带匹配单词
+ * @param word - 带匹配词
  * @param options - 选项
+ * @param match_weight - 匹配位置权重
+ * @param consecutive_match_weight - 连续词权重
+ * @returns
  */
 function sortResult<T>(
     result: T[],
     word: string,
     options: PinYinFuzzSearchOption<T>,
     match_weight: Map<T, number>,
+    consecutive_match_weight: Map<T, number>,
 ) {
     const toText = options!.textProvider!;
 
@@ -275,25 +381,36 @@ function sortResult<T>(
         case 'ASC':
             return result.sort((a, b) => toText(a).localeCompare(toText(b)));
         case 'AUTO':
-            // levenshtein -> 搜索词顺序 -> 结果词长度 -> 字母升序 -> 匹配词位置
+            // levenshtein -> 搜索词顺序 -> 结果词长度 -> 字母升序 -> 匹配词位置 -> 连续词长度
             return result.sort((a, b) => {
-                const position = match_weight.get(a)! - match_weight.get(b)!;
+                const consecutive_weight =
+                    consecutive_match_weight.get(b)! -
+                    consecutive_match_weight.get(a)!;
 
-                if (position === 0) {
-                    const comp = toText(a).localeCompare(toText(b));
-                    if (!comp) {
-                        const len = toText(a).length - toText(b).length;
-                        if (!len) {
-                            return (
-                                levenshtein(word, toText(a)) -
-                                levenshtein(word, toText(b))
-                            );
+                if (
+                    consecutive_match_weight.get(b)! ===
+                    consecutive_match_weight.get(a)!
+                ) {
+                    const position =
+                        match_weight.get(a)! - match_weight.get(b)!;
+
+                    if (position === 0) {
+                        const comp = toText(a).localeCompare(toText(b));
+                        if (!comp) {
+                            const len = toText(a).length - toText(b).length;
+                            if (!len) {
+                                return (
+                                    levenshtein(word, toText(a)) -
+                                    levenshtein(word, toText(b))
+                                );
+                            }
+                            return len;
                         }
-                        return len;
+                        return comp;
                     }
-                    return comp;
+                    return position;
                 }
-                return position;
+                return consecutive_weight;
             });
 
         default:
@@ -375,14 +492,23 @@ function getAllPinyinBreak(begin: number, word: string, result: string[] = []) {
  * 获取匹配结果
  *
  * @param pinyin_list - 拼音化的list
+ * @param word - word
+ * @param options - 选项
  * @param word_break - 分词后的word
+ * @param match_weight_index - 匹配权重
+ * @param match_position_index - 匹配位置
+ * @param consecutive_match_index - 连续匹配权重
  * @param is_character - 是否是匹配汉字
+ * @returns
  */
-function getMatchResult(
+function getMatchResult<T>(
     pinyin_list: string[][],
     word: string,
+    options: PinYinFuzzAdvanceSearchOption<T>,
     word_break: string[],
     match_weight_index: Record<string, number>,
+    match_position_index: number[][],
+    consecutive_match_index: Record<string, number>,
     is_character = false,
 ) {
     const res: number[] = [];
@@ -397,19 +523,39 @@ function getMatchResult(
     pinyin_list.forEach((list_word: string[], index) => {
         const original_word = list_word.join('');
         const original_index = original_word.indexOf(word);
+        // 首次匹配位置，用来记录最长匹配长度
+        let first_match_position = 0;
+        // 上次匹配位置，用来记录最长匹配长度
+        let last_match_position = 0;
+        // 最大匹配长度
+        let max_consecutive_match_len = 0;
+
+        consecutive_match_index[index] = max_consecutive_match_len;
 
         // 提前进行一次不间隔非模糊匹配，降低匹配复杂度
-        if (original_index !== -1) {
+        if (
+            original_index !== -1 &&
+            !(options.advance && !all_chinese_regex.test(word))
+        ) {
             res.push(index);
             match_weight_index[index] = original_index;
+
+            consecutive_match_index[index] = Infinity;
+
+            match_position_index.push(
+                Array.from({length: word.length}, (_, i) => original_index + i),
+            );
 
             return;
         }
 
         word_break.forEach((word) => {
+            // list_index, single_word_index
             let l_index = 0,
                 s_index = 0;
+
             let single_word: string | string[] = word;
+            const tmp_position: number[] = [];
 
             if (!is_character) {
                 single_word = single_word_map[word];
@@ -426,23 +572,46 @@ function getMatchResult(
                         .split(' ')
                         .find((s) => s.startsWith(single_word[s_index]))
                 ) {
+                    if (l_index - last_match_position > 0) {
+                        last_match_position++;
+                        if (
+                            last_match_position - first_match_position >
+                            max_consecutive_match_len
+                        ) {
+                            max_consecutive_match_len =
+                                last_match_position - first_match_position;
+                        }
+                    } else {
+                        first_match_position = l_index;
+                        last_match_position = l_index;
+                    }
+
+                    tmp_position.push(l_index);
                     l_index++;
                     s_index++;
                 } else {
                     l_index++;
+                    last_match_position = l_index;
                 }
 
                 if (s_index === single_word.length) {
+                    match_position_index.push(tmp_position);
+
+                    // if (l_index - last_match_position === 1) {
+                    //     last_match_position = l_index;
+                    // } else {
+                    //     last_match_position = index + 1;
+                    // }
+
                     res.push(index);
                     match_weight_index[index] = l_index;
                     return;
-                    // s_index === l_index 时为严格匹配
-                    // } else if (s_index === l_index) {
-                    //     res.push(index);
-                    // }
                 }
             }
         });
+        if (consecutive_match_index[index] < max_consecutive_match_len) {
+            consecutive_match_index[index] = max_consecutive_match_len;
+        }
     });
 
     return res;
@@ -454,12 +623,14 @@ function getMatchResult(
  * @param options - 用户提供的配置
  */
 function _mergedDefaultOption<T>(
+    advance: boolean,
     options?: PinYinFuzzSearchOption<T>,
-): Required<PinYinFuzzSearchOption<T>> {
+): Required<PinYinFuzzAdvanceSearchOption<T>> {
     return {
         sort: options?.sort ?? 'AUTO',
         multiple: options?.multiple ?? 'ALL',
         separator: options?.separator ?? ' ',
+        advance,
         /**
          * 由用户提供进行匹配的字符串字段
          *
@@ -485,4 +656,11 @@ export interface PinYinFuzzSearchOption<T> {
 
     /** 自定义提供要匹配的字段 */
     textProvider?: (item: T) => string;
+}
+
+/**
+ * 高级配置，扩充了advance选项
+ */
+interface PinYinFuzzAdvanceSearchOption<T> extends PinYinFuzzSearchOption<T> {
+    advance?: boolean;
 }
