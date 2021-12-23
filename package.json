@@ -5,6 +5,7 @@
         "dev": "vite",
         "build": "NODE_ENV=production vite build && tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
         "serve": "vite preview",
+        "build:demo": "vite build --mode demo",
         "lint": "npm-run-all -p lint:fix lint:script lint:style",
         "lint:fix": "prettier --loglevel=error -w src",
         "lint:script": "eslint --fix --ext .ts,tsx src",
