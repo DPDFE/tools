@@ -16,6 +16,10 @@
 -   支持设置多词同时搜索时的排序策略和分隔符
 -   支持返回匹配位置
 
+如果您使用 React + Antd，还可以使用以下库对，Antd中的Select等一键支持拼音搜索功能：
+
+https://github.com/DPDFE/antd-react-components
+
 ## 安装
 
 -   使用 npm:
