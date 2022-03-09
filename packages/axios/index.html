@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <!-- <script src="https://unpkg.com/axios/dist/axios.min.js"></script> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite App</title>
+  </head>
+  <script type="module" src="./src/example/main.ts"></script>
+  <body>
+    <script type="module">
+      import axios from './src/index.ts'
+      /**
+       * Fetch data from server
+       */
+       window.fetchData = async() =>{
+         const instance = axios.create({
+           baseURL: 'http://localhost:3000/api',
+           timeout: 1000000,
+           strategy: 0b100, // remove 上一个
+         })
+
+         instance.get('/test', {bucket: 'search'}).then(res=>{
+           console.log(res, 'res4333')
+         })
+          await sleep(100)
+         instance.get('/test',  {bucket: 'search'}).then(res=>{})
+         await sleep(100)
+         instance.get('/test', {bucket: 'search'}).then(res=>{})
+
+
+
+        //  await sleep(100)
+        //  instance.get('/test?a=9987', {strategy: 0b10}).then(res=>{})
+        //  await sleep(100)
+
+
+
+        //  instance.stopPendingReq(['search','search2'])
+
+
+         function sleep(ms) {
+           return new Promise(resolve => setTimeout(resolve, ms));
+         }
+    
+
+      }
+
+      function sleep(time){
+        return new Promise(resolve => {
+          setTimeout(() => {
+            resolve('resolved');
+          }, time);
+        });
+      }
+    </script>
+    <div id="app"></div>
+    
+
+  </body>
+</html>
