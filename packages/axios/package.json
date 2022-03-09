@@ -1,6 +1,7 @@
 {
   "name": "@dpdfe/axios",
   "module": "dist/dpd-axios.es.js",
+  "types": "dist/index.d.ts",
   "private": true,
   "version": "0.0.0",
   "scripts": {

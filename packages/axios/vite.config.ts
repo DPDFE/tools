@@ -18,7 +18,6 @@ export default defineConfig({
                  * @returns
                  */
                 rewrite: (path) => {
-                    console.log(path, 'path');
                     return path.replace(/^\/api/, '');
                 },
             },

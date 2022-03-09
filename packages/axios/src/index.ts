@@ -43,20 +43,20 @@ declare module 'axios' {
          */
         addPendingReq(config: AxiosRequestConfig): void;
 
-        /** 在pending列表中删除已经解决的请求 */
+        /** 在pending列表中删除已响应的请求 */
         removeSuccessReq: (config: AxiosResponse<unknown>) => void;
 
         /** 停止重复的请求 */
         removeRepeatReq: (config: AxiosRequestConfig) => void;
 
-        /** 移除所有的请求 */
+        /** 停止的请求，默认停止get请求 */
         cancelReqs: (method?: Method) => void;
     }
 }
 
 export enum AjaxStrategy {
-    CANCEL_LAST_AT_MOST_ONCE = 0b10,
-    CANCEL_CURRENT_AT_MOST_ONCE = 0b100,
+    CANCEL_LAST_AT_MOST_ONCE = 'cancel_last_at_most_once',
+    CANCEL_CURRENT_AT_MOST_ONCE = 'cancel_current_at_most_once',
 }
 
 /**
@@ -119,7 +119,7 @@ dpd_axios.create = function (config?: AxiosRequestConfig) {
         },
     );
 
-    /** 添加response拦截器，当请求完成后，在pending列表中移除该请求，方便后续判断pengding中的请求是否有重复的，从而实行重复请求策略*/
+    /** 添加response拦截器，当请求响应后，在pending列表中移除该请求，方便后续判断pengding中的请求是否有重复的*/
     instance.interceptors.response.use(
         (response) => {
             instance.removeSuccessReq(response);
@@ -163,7 +163,7 @@ dpd_axios.create = function (config?: AxiosRequestConfig) {
 };
 
 /**
- * 请求移除pending列表中的请求
+ * 移除pending列表中的指定请求
  *
  * @param response - AxiosResponse
  */

@@ -4,10 +4,8 @@ const port = 3001; // 设置端口
 
 app.use(express.json()); //使用 json中间件 扩展express功能
 
-// 利用get设置 url
-// 前面一部分是根路由  后面一部分是回调函数 并向客户端发送 数据
 app.get('/test', async (req, res) => {
-    await new Promise((resolve, reject) => {
+    await new Promise((resolve) => {
         setTimeout(resolve, 1000);
     });
     console.log('test');
@@ -15,7 +13,7 @@ app.get('/test', async (req, res) => {
 });
 
 app.post('/test', async (req, res) => {
-    await new Promise((resolve, reject) => {
+    await new Promise((resolve) => {
         setTimeout(resolve, 1000);
     });
     res.send('Hello post!');
