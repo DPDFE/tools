@@ -2,10 +2,10 @@
 
 本项目包含一系列纯 JS 工具库。
 
+# 拼音模糊搜索
+
 [![npm-image](https://img.shields.io/npm/v/@dpdfe/tools.svg?style=flat-square)](https://www.npmjs.com/package/@dpdfe/tools)
 ![Test Status](https://github.com/DPDFE/tools/actions/workflows/jest.yml/badge.svg?1)
-
-# 拼音模糊搜索
 
 ## Features
 
