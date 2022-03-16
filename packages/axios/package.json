@@ -1,0 +1,28 @@
+{
+  "name": "@dpdfe/axios",
+  "module": "dist/axios.es.js",
+  "types": "dist/index.d.ts",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && tsc -p tsconfig.json",
+    "pub": "npm run build && npm publish",
+    "preview": "vite preview",
+    "axios-server": "node ./server.ts",
+    "jest": "jest ",
+    "test": "npm-run-all -p  axios-server jest"
+  },
+  "devDependencies": {
+    "@types/jest": "^27.0.2",
+    "@types/node": "^16.11.7",
+    "express": "^4.17.3",
+    "jest": "^27.3.1",
+    "npm-run-all": "^4.1.5",
+    "ts-jest": "^27.0.7",
+    "typescript": "^4.5.4",
+    "vite": "^2.8.0"
+  },
+  "dependencies": {
+    "axios": "^0.26.0"
+  }
+}

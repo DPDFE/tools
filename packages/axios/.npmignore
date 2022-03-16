@@ -1,0 +1,9 @@
+node_modules
+__test__
+src
+.babelrc.js
+.eslintrc.js
+scripts
+coverage
+docs
+.gitignore
