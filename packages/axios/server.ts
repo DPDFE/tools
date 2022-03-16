@@ -10,7 +10,6 @@ app.get('/test', async (req, res) => {
     await new Promise((resolve) => {
         setTimeout(resolve, 1000);
     });
-    console.log('进来了');
     res.send('Hello get!');
 });
 
